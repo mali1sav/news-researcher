@@ -24,41 +24,86 @@ client = httpx.Client(base_url=API_BASE_URL, headers=HEADERS)
 
 # Function to perform web research using Exa API
 def perform_web_research(exa_client, query, num_results=5, hours_back=24, selected_categories=None):
-    # Get current time in UTC for crawl date
-    now = datetime.now(timezone.utc)
+    try:
+        # Get current time in UTC
+        now = datetime.now(timezone.utc)
+        
+        # Calculate start date based on hours_back
+        start_date = now - timedelta(hours=hours_back)
+        
+        # Format crawl date to include older content
+        start_crawl = start_date.strftime('%Y-%m-%dT00:00:01.000Z')
+        
+        print(f"Debug - Search parameters:")
+        print(f"Query: {query}")
+        print(f"Start crawl date: {start_crawl}")
+        print(f"Categories to search: {selected_categories}")
+        print(f"Results per category: {num_results}")
+        
+        all_categories = ["company", "research_paper", "news", "tweet", 
+                         "personal_site", "pdf"]
+        
+        categories_to_search = (all_categories if "all" in selected_categories 
+                              else selected_categories or all_categories)
+        
+        all_results = []
+        successful_categories = []
+        failed_categories = []
+        
+        for category in categories_to_search:
+            try:
+                # Use search_and_contents with minimal parameters
+                result = exa_client.search_and_contents(
+                    query,
+                    type="neural",
+                    num_results=num_results,
+                    category=category,
+                    text=True,
+                    use_autoprompt=True
+                )
+                
+                if result and result.results:
+                    all_results.extend(result.results)
+                    successful_categories.append(category)
+                    print(f"Success - Category {category}: Found {len(result.results)} results")
+                else:
+                    failed_categories.append(category)
+                    print(f"No results found for category {category}")
+                    
+            except Exception as e:
+                failed_categories.append(category)
+                print(f"Error in category {category}: {str(e)}")
+                continue
+        
+        # Provide feedback about the search results
+        if successful_categories:
+            st.info(f"Found results in categories: {', '.join(successful_categories)}")
+        if failed_categories:
+            st.warning(f"No results found in categories: {', '.join(failed_categories)}")
+        
+        if not all_results:
+            print("Debug - No results found in any category")
+            suggestions = [
+                "Try a broader search query",
+                "Increase the time window",
+                "Select different categories",
+                "Check if the query contains any special characters",
+                "Try using more general keywords"
+            ]
+            st.error("No results found. Suggestions:")
+            for suggestion in suggestions:
+                st.write(f"• {suggestion}")
+            return None
+        
+        # Sort results by score
+        all_results.sort(key=lambda x: x.score if x.score is not None else 0, reverse=True)
+        print(f"Debug - Total results found: {len(all_results)}")
+        return type('SearchResponse', (), {'results': all_results})
     
-    # Format crawl date in ISO 8601 format
-    start_crawl = now.strftime('%Y-%m-%dT00:00:01.000Z')
-    
-    # Define all available categories
-    all_categories = ["company", "research_paper", "news", "github", "tweet", 
-                     "movie", "song", "personal_site", "pdf"]
-    
-    # If 'All' is selected or no categories specified, use all categories
-    categories_to_search = (all_categories if "all" in selected_categories 
-                          else selected_categories or all_categories)
-    
-    all_results = []
-    for category in categories_to_search:
-        try:
-            result = exa_client.search_and_contents(
-                query,
-                type="neural",
-                use_autoprompt=True,
-                num_results=num_results,
-                start_crawl_date=start_crawl,
-                text=True,
-                category=category,
-                exclude_domains=["en.wikipedia.org"]
-            )
-            if result and result.results:
-                all_results.extend(result.results)
-        except Exception as e:
-            continue
-    
-    # Sort results by score and limit to requested number
-    all_results.sort(key=lambda x: x.score if x.score is not None else 0, reverse=True)
-    return type('SearchResponse', (), {'results': all_results})
+    except Exception as e:
+        print(f"Debug - Main error: {str(e)}")
+        st.error(f"Error during research: {str(e)}")
+        return None
 
 # Function to serialize search results
 def serialize_search_results(search_result):
@@ -305,15 +350,12 @@ def main():
     # Add 'All' option first
     all_selected = st.sidebar.checkbox("All", value=False, key="category_all")
     
-    # Define all categories
+    # Define all categories - removed movies, songs, and github
     categories = {
         "News": "news",
         "Research Papers": "research_paper",
         "Company Info": "company",
-        "GitHub": "github",
         "Tweets": "tweet",
-        "Movies": "movie",
-        "Songs": "song",
         "Personal Sites": "personal_site",
         "PDFs": "pdf"
     }
@@ -387,10 +429,33 @@ def main():
                     hours_back,
                     selected_categories
                 )
+                
+                if search_result is None:
+                    st.stop()
+                
                 st.session_state.search_results = serialize_search_results(search_result)
                 st.session_state.search_performed = True
+                
+                if not st.session_state.search_results["results"]:
+                    st.warning("""
+                    No results found. Try:
+                    1. Using different search terms
+                    2. Extending the time window
+                    3. Selecting more categories
+                    4. Making the query more general
+                    """)
+                    st.stop()
+                
             except Exception as e:
-                st.error(f"Error during web research: {e}")
+                st.error(f"""
+                Error during research: {str(e)}
+                
+                Possible solutions:
+                1. Check your internet connection
+                2. Verify your API key
+                3. Try again in a few moments
+                4. Reduce the number of results requested
+                """)
                 st.stop()
 
     # Display results if search has been performed
