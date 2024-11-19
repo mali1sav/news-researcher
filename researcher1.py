@@ -31,12 +31,14 @@ def perform_web_research(exa_client, query, num_results=5, hours_back=24, select
         # Calculate start date based on hours_back
         start_date = now - timedelta(hours=hours_back)
         
-        # Format crawl date to include older content
-        start_crawl = start_date.strftime('%Y-%m-%dT00:00:01.000Z')
+        # Format dates in ISO format for Exa API
+        start_date_str = start_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+        end_date_str = now.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
         
         print(f"Debug - Search parameters:")
         print(f"Query: {query}")
-        print(f"Start crawl date: {start_crawl}")
+        print(f"Start date: {start_date_str}")
+        print(f"End date: {end_date_str}")
         print(f"Categories to search: {selected_categories}")
         print(f"Results per category: {num_results}")
         
@@ -52,14 +54,16 @@ def perform_web_research(exa_client, query, num_results=5, hours_back=24, select
         
         for category in categories_to_search:
             try:
-                # Use search_and_contents with minimal parameters
+                # Use search_and_contents with date parameters
                 result = exa_client.search_and_contents(
                     query,
                     type="neural",
                     num_results=num_results,
                     category=category,
                     text=True,
-                    use_autoprompt=True
+                    use_autoprompt=True,
+                    start_published_date=start_date_str,
+                    end_published_date=end_date_str
                 )
                 
                 if result and result.results:
@@ -156,37 +160,43 @@ def generate_article(content, query):
             {
                 "role": "system",
                 "content": f"""
-You are an expert journalist with extensive knowledge in the area of '{query}'. Your task is to create a detailed, well-researched, and insightful article based on the provided research.
+You are an expert Thai technology journalist with extensive knowledge across various aspects of '{query}' topic. 
+Your task is to create a detailed, well-researched, and insightful article about {query}. The article should be tailored for a Thai audience interested in {query}.
+
+Please structure your Thai-language article with the following elements:
 
 **STRICT FORMAT REQUIREMENTS:**
-
 1. **First lines must be exactly:**
    - **Title:** [60 characters max]
    - **Meta Description:** [160 characters max]
+   - **Excerpt:** [2 sentences max, for social sharing]
    - **# [Title repeated]**
 
 2. **Structure:**
-   - **Table of Contents:** Use a simple bullet list.
-   - **Use only '##' for section headings.**
-   - **Plain paragraphs:** No styling, bold, italic, special characters, emojis, or fancy formatting.
-   - **Single newline between paragraphs.**
-   - **Citations:** Use the given URLs as in-paragraph citations where appropriate, formatted as [Source: Brand Name](URL)
+   - Introduction paragraph: Introduce the topic and its significance in the tech world.
+   - Use 2-3 section headings (##).
+   - For each heading, provide 2-3 paragraphs of interesting explanations.
+   - Do not use repetitive sentences.
+   - Ensure each paragraph serves a unique purpose.
 
-3. **Content Guidelines:**
-   - **Tone:** Write in a professional and engaging tone suitable for a knowledgeable audience.
-   - **Clarity:** Use clear and accessible language, explaining technical terms for readers who may not have advanced knowledge.
-   - **Originality and Depth:** Ensure originality and depth in your analysis, offering unique insights and critical thinking.
-   - **Structure:** Divide the article into sections with '##' headings, covering 3-5 key aspects or viewpoints of the topic.
-   - **In-Depth Analysis:** For each section, provide 3-5 paragraphs of in-depth analysis. Include specific examples, data, and references from the research snippets where relevant.
-   - **Balanced Perspectives:** Discuss multiple viewpoints, including both positive and negative impacts, and provide critical insights.
-   - **Theoretical Frameworks:** Incorporate relevant theories, frameworks, or models where appropriate.
-   - **Controversies and Debates:** Address any controversies or debates related to the topic.
-   - **Conclusion:** End with a conclusion that summarizes key points, reflects on implications, and emphasizes the importance of understanding the topic.
+3. **Guidelines:**
+   - Write in Thai, making complex concepts accessible.
+   - Keep entity and technical terms in English (e.g., people names, organisation names, platforms, technical concepts, product names).
+   - Use English names for cryptocurrencies (e.g., use 'Bitcoin' not 'บิทคอยน์').
+   - Include relevant sources as in-text citations formatted as (อ้างอิง: Brand Name) with clickable hyperlinks.
+   - Ensure smooth transitions between sections.
 
-4. **Additional Requirements:**
-   - **Avoid Plagiarism:** Do not copy text verbatim from the research snippets unless properly quoted and cited.
-   - **Value to the Reader:** Focus on adding value to the reader by providing thoughtful analysis and synthesis of the information.
-   - **No Filler Content:** Ensure every sentence contributes meaningfully to the article.
+4. **Required Additional Sections:**
+   - Conclusion (without heading): Summarize key points and implications
+   - **Image Prompt:** [One short sentence describing the main visual concept, max 20 words]
+
+5. **Content Guidelines:**
+   - Use clear and engaging Thai language
+   - Avoid unnecessary technical jargon
+   - Focus on value-adding information
+   - Maintain professional tone while being accessible
+
+Use the provided research content to create an informative and engaging article following these guidelines.
 """
             },
             {
@@ -195,7 +205,7 @@ You are an expert journalist with extensive knowledge in the area of '{query}'. 
             }
         ],
         "temperature": 0.7,
-        "max_tokens": 5000
+        "max_tokens": 4000
     }
 
     try:
@@ -208,12 +218,12 @@ You are an expert journalist with extensive knowledge in the area of '{query}'. 
         title, meta_description = extract_metadata(article_content)
         
         if not title or not meta_description:
-            # Generate missing metadata
-            metadata_prompt = f"Based on this article content, generate a:\n1. Title (60 chars max)\n2. Meta description (160 chars max)\n\nArticle:\n{article_content}"
+            # Generate missing metadata in Thai
+            metadata_prompt = f"Based on this Thai article content, generate a:\n1. Title in Thai (60 chars max)\n2. Meta description in Thai (160 chars max)\n\nArticle:\n{article_content}"
             metadata_response = client.post("/chat/completions", json={
                 "model": "anthropic/claude-3.5-sonnet",
                 "messages": [
-                    {"role": "system", "content": "You are an SEO expert. Return only the Title and Meta Description, each on a new line, prefixed with 'Title: ' and 'Meta Description: '."},
+                    {"role": "system", "content": "You are a Thai SEO expert. Return only the Title and Meta Description in Thai, each on a new line, prefixed with 'Title: ' and 'Meta Description: '."},
                     {"role": "user", "content": metadata_prompt}
                 ],
                 "temperature": 0.7
@@ -317,6 +327,115 @@ def format_time_ago(published_date):
     except Exception as e:
         print(f"Error formatting time for date {published_date}: {str(e)}")
         return "Unknown time"
+
+# Function to convert markdown content to WordPress Gutenberg blocks
+def convert_to_wordpress_blocks(markdown_content):
+    """Convert markdown content to WordPress Gutenberg blocks."""
+    # Split content into lines
+    lines = markdown_content.split('\n')
+    wp_blocks = []
+    current_paragraph = []
+    metadata = {"title": "", "meta_description": "", "excerpt": ""}
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        
+        # Handle metadata sections
+        if line.startswith('Title:'):
+            metadata['title'] = line[6:].strip()
+        elif line.startswith('Meta Description:'):
+            metadata['meta_description'] = line[16:].strip()
+        elif line.startswith('Excerpt:'):
+            metadata['excerpt'] = line[8:].strip()
+        elif line.startswith('Image Prompt:'):
+            wp_blocks.append(f'<!-- wp:paragraph -->\n<p><strong>Image Prompt:</strong> {line[13:].strip()}</p>\n<!-- /wp:paragraph -->')
+        elif not line:  # Empty line
+            if current_paragraph:
+                # Join and wrap the current paragraph
+                para_content = ' '.join(current_paragraph)
+                # Convert markdown links to WordPress format
+                # Match pattern [text](url) and convert to proper WordPress link format
+                import re
+                def replace_link(match):
+                    text = match.group(1)
+                    url = match.group(2)
+                    return f'<a class="general-link" href="{url}" target="_blank" rel="noopener">{text}</a>'
+                
+                # First convert any markdown links in the text
+                para_content = re.sub(r'\[(.*?)\]\((.*?)\)', replace_link, para_content)
+                
+                # Then handle the source citations
+                para_content = para_content.replace('(Source: ', '(อ้างอิง: <a class="general-link" href="')
+                para_content = para_content.replace('(อ้างอิง: ', '(อ้างอิง: <a class="general-link" href="')
+                # Make sure we properly close the citation links
+                if 'อ้างอิง:' in para_content and not para_content.endswith('</a>)'):
+                    parts = para_content.split('" target="_blank" rel="noopener">')
+                    if len(parts) > 1:
+                        site_name = parts[1].rstrip(')')
+                        para_content = f'{parts[0]}" target="_blank" rel="noopener">{site_name}</a>)'
+                
+                wp_blocks.append(f'<!-- wp:paragraph -->\n<p>{para_content}</p>\n<!-- /wp:paragraph -->')
+                current_paragraph = []
+        elif line.startswith('# '):  # Title
+            wp_blocks.append(f'<!-- wp:heading {"level":1} -->\n<h1 class="wp-block-heading">{line[2:]}</h1>\n<!-- /wp:heading -->')
+        elif line.startswith('## '):  # Section heading
+            if current_paragraph:
+                para_content = ' '.join(current_paragraph)
+                # Apply the same link formatting as above
+                import re
+                def replace_link(match):
+                    text = match.group(1)
+                    url = match.group(2)
+                    return f'<a class="general-link" href="{url}" target="_blank" rel="noopener">{text}</a>'
+                
+                para_content = re.sub(r'\[(.*?)\]\((.*?)\)', replace_link, para_content)
+                para_content = para_content.replace('(Source: ', '(อ้างอิง: <a class="general-link" href="')
+                para_content = para_content.replace('(อ้างอิง: ', '(อ้างอิง: <a class="general-link" href="')
+                if 'อ้างอิง:' in para_content and not para_content.endswith('</a>)'):
+                    parts = para_content.split('" target="_blank" rel="noopener">')
+                    if len(parts) > 1:
+                        site_name = parts[1].rstrip(')')
+                        para_content = f'{parts[0]}" target="_blank" rel="noopener">{site_name}</a>)'
+                
+                wp_blocks.append(f'<!-- wp:paragraph -->\n<p>{para_content}</p>\n<!-- /wp:paragraph -->')
+                current_paragraph = []
+            wp_blocks.append(f'<!-- wp:heading -->\n<h2 class="wp-block-heading">{line[3:]}</h2>\n<!-- /wp:heading -->')
+        else:
+            current_paragraph.append(line)
+        i += 1
+    
+    # Handle any remaining paragraph
+    if current_paragraph:
+        para_content = ' '.join(current_paragraph)
+        # Apply the same link formatting one last time
+        import re
+        def replace_link(match):
+            text = match.group(1)
+            url = match.group(2)
+            return f'<a class="general-link" href="{url}" target="_blank" rel="noopener">{text}</a>'
+        
+        para_content = re.sub(r'\[(.*?)\]\((.*?)\)', replace_link, para_content)
+        para_content = para_content.replace('(Source: ', '(อ้างอิง: <a class="general-link" href="')
+        para_content = para_content.replace('(อ้างอิง: ', '(อ้างอิง: <a class="general-link" href="')
+        if 'อ้างอิง:' in para_content and not para_content.endswith('</a>)'):
+            parts = para_content.split('" target="_blank" rel="noopener">')
+            if len(parts) > 1:
+                site_name = parts[1].rstrip(')')
+                para_content = f'{parts[0]}" target="_blank" rel="noopener">{site_name}</a>)'
+        
+        wp_blocks.append(f'<!-- wp:paragraph -->\n<p>{para_content}</p>\n<!-- /wp:paragraph -->')
+    
+    # Add metadata at the beginning of the output
+    metadata_blocks = []
+    if metadata['title']:
+        metadata_blocks.append(f'<!-- wp:paragraph -->\n<p><strong>Title:</strong> {metadata["title"]}</p>\n<!-- /wp:paragraph -->')
+    if metadata['meta_description']:
+        metadata_blocks.append(f'<!-- wp:paragraph -->\n<p><strong>Meta Description:</strong> {metadata["meta_description"]}</p>\n<!-- /wp:paragraph -->')
+    if metadata['excerpt']:
+        metadata_blocks.append(f'<!-- wp:paragraph -->\n<p><strong>Excerpt:</strong> {metadata["excerpt"]}</p>\n<!-- /wp:paragraph -->')
+    
+    return '\n\n'.join(metadata_blocks + wp_blocks)
 
 # Streamlit App Layout
 def main():
@@ -536,6 +655,21 @@ def main():
                     data=article_markdown,
                     file_name=f"article_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md",
                     mime="text/markdown",
+                )
+
+                # Convert markdown to WordPress Gutenberg blocks
+                wordpress_blocks = convert_to_wordpress_blocks(article_markdown)
+
+                # Display WordPress Gutenberg blocks
+                st.header("WordPress Gutenberg Blocks")
+                st.code(wordpress_blocks)
+
+                # Provide download button for WordPress Gutenberg blocks
+                st.download_button(
+                    label="Download WordPress Gutenberg Blocks",
+                    data=wordpress_blocks,
+                    file_name=f"wordpress_blocks_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                    mime="text/plain",
                 )
             else:
                 st.error("Failed to generate the article. Please try again.")
