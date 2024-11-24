@@ -4,3 +4,4 @@ httpx
 python-dotenv
 urllib3
 pytz
+tavily
