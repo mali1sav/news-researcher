@@ -617,23 +617,19 @@ Use this exact title: {selected_title}
 (อ้างอิง: <a href="https://cryptopotato.com/full-article-url">CryptoPotato</a>)
 2. **Structure:**
    - Introduction: Set up the main topic and its significance
-   - Body (3-8 unique sections): Each unique section must directly support or explain the title's topic
-   - Each section should start with H2 format and have **3-5 well-structured paragraphs** or list items depending on the topic.
-   - For each content section, pick the right format like sub-headings, paragraphs or list items for improve readability. 
-   - For each content under each H2, provide an in-depth explanation, context, and implications to Crypto investors. If relevant, include direct quotes or specific data points from the transcript to add credibility.
+   - Body (3-4 unique sections): Each unique section must directly support or explain the title's topic
+   - Each section should use an H2 heading. Keep each section directly focused on supporting or explaining the title.
+   - In each H2 section, use 3-5 paragraphs or list items, whichever best improves readability. Provide in-depth explanations, context, and implications for Crypto investors. Includе direct quotes or specific data points from the transcript where relevant to add credibility.
    - Remove any sections that drift from the main topic
    - Avoid duplicate heading and content. If there is a duplicate, remove it.
 
 3. **Guidelines:**
    - Write in Thai, use semi-professional language.
-   - Make complex technology concepts accessible to Thai audiences who have baseline knowledge about the topic. 
-   - When referencing a source, naturally integrate the Brand Name of the source into the sentence as a clickable hyperlink. Encode the URL within the Brand Name. Ensure the Brand Name is a clickable link to the source.
-   - Ensure each paragraph builds on the main topic
-   - Provide balanced perspectives and critical insights when discussing controversial topics.
+   - Present complex technology concepts in a way that Thai readers with basic knowledge of the topic can easily understand.
    - Ensure smooth transitions between sections.
 
 4. **Required Additional Sections:**
-   - Conclusion: Summarize key points about the main topic only in Thai.
+   - สรุป: Summarise key points about the main topic in Thai.
    - Excerpt for WordPress: [1 Thai short sentence for overview that reinforces the H1 and summarizes the main topic.]
    - Suggest a Wordpress slug format in English in 3-6 words separated by '-'
    - Image Prompt: [Provide a single, simple English sentence in 8-10 words for an AI image generator that captures the essence of the article's main points. The sentence should focus on only one or two key objects or concepts. Avoid complex descriptions, multiple elements, and detailed instructions about image composition.]
