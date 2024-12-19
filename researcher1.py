@@ -551,9 +551,8 @@ Each title should be unique and focus on a different aspect or angle of the topi
 Requirements for each title:
 - Must be in Thai
 - Maximum 60 characters
-- News-like headline style
+- News-like headline style, is engaging and click-worthy.
 - Must directly relate to {query}
-- Should be engaging and informative
 - Keep entity terms (company names, product names, etc.) in English
 
 Return ONLY the three titles in this format:
@@ -615,11 +614,13 @@ Use this exact title: {selected_title}
    - Title: {selected_title}
    - Meta Description: [Expand on title's main topic, 160 chars max]
    - H1: {selected_title}
-(อ้างอิง: <a href="https://cryptopotato.com">CryptoPotato</a>)
+(อ้างอิง: <a href="https://cryptopotato.com/full-article-url">CryptoPotato</a>)
 2. **Structure:**
    - Introduction: Set up the main topic and its significance
-   - Body (3-6 unique sections): Each unique section must directly support or explain the title's topic
+   - Body (3-8 unique sections): Each unique section must directly support or explain the title's topic
    - Each section should start with H2 format and have **3-5 well-structured paragraphs** or list items depending on the topic.
+   - For each content section, pick the right format like sub-headings, paragraphs or list items for improve readability. 
+   - For each content under each H2, provide an in-depth explanation, context, and implications to Crypto investors. If relevant, include direct quotes or specific data points from the transcript to add credibility.
    - Remove any sections that drift from the main topic
    - Avoid duplicate heading and content. If there is a duplicate, remove it.
 
